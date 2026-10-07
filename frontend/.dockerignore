@@ -1,0 +1,8 @@
+node_modules/
+build/
+.react-router/
+.env
+.env.local
+npm-debug.log*
+README.md
+.git/

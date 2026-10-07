@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend — lint, тесты, миграции
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: pulse
+          POSTGRES_PASSWORD: pulse_ci_password
+          POSTGRES_DB: pulse_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pulse -d pulse_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: latest
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Установить зависимости
+        run: uv sync --frozen
+
+      - name: Ruff check
+        run: uv run ruff check .
+
+      - name: Ruff format
+        run: uv run ruff format --check .
+
+      - name: Тесты
+        env:
+          # Пустое значение = интеграционные тесты пропустятся.
+          TEST_DATABASE_URL: postgresql+asyncpg://pulse:pulse_ci_password@localhost:5432/pulse_test
+        run: uv run pytest -q
+
+      # Критерий приёмки №21: миграции применяются на чистой БД без ошибок.
+      - name: Миграции с нуля
+        env:
+          DATABASE_URL: postgresql+asyncpg://pulse:pulse_ci_password@localhost:5432/pulse_test
+        run: |
+          uv run alembic upgrade head
+          uv run alembic downgrade base
+          uv run alembic upgrade head
+
+  frontend:
+    name: Frontend — типы и сборка
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Установить зависимости
+        run: npm ci
+
+      - name: Проверка типов
+        run: npm run typecheck
+
+      # Собираем именно SSR-бандл: отсутствие server-бандла ломает деплой.
+      - name: Сборка
+        run: npm run build
+
+      - name: Проверить артефакты сборки
+        run: |
+          test -f build/server/index.js
+          test -d build/client/assets
+          echo "SSR-артефакты на месте"
+
+  docker:
+    name: Docker — сборка образов и smoke
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Собрать образы
+        run: docker compose build
+
+      # Критерий приёмки №19: проект запускается через Docker Compose.
+      - name: Поднять стек и проверить
+        run: |
+          cp .env.example .env
+          docker compose up -d
+          for i in $(seq 1 40); do
+            if curl -fsS http://localhost:8090/nginx-health > /dev/null 2>&1; then
+              echo "Nginx поднялся"
+              break
+            fi
+            sleep 3
+          done
+          curl -fsS http://localhost:8090/healthz
+          echo
+          curl -fsS http://localhost:8090/api/v1/health
+          echo
+          curl -fsS http://localhost:8090/ | grep -q "ПУЛЬС"
+          echo "Главная страница отдаётся через SSR"
+
+      - name: Логи сервисов
+        if: failure()
+        run: docker compose logs --tail=100
+
+      - name: Остановить стек
+        if: always()
+        run: docker compose down -v

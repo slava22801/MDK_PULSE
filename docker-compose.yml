@@ -1,0 +1,146 @@
+# ─────────────────────────────────────────────────────────────
+# ПУЛЬС — стек разработки и production-подобного запуска.
+# Раздел 18.3 ТЗ: frontend, backend, PostgreSQL, Redis, Nginx.
+# Хранилище изображений в dev — файловый том, который раздаёт backend
+# с /media (STORAGE_DRIVER=local). Внешний S3-совместимый сервис
+# (MinIO, Yandex Object Storage, AWS S3) подключается переключением
+# одной переменной — см. docs/DEPLOY.md.
+# Worker добавится на этапе 5 вместе с фоновыми задачами.
+# ─────────────────────────────────────────────────────────────
+
+name: pulse
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: pulse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pulse_shop}
+      POSTGRES_USER: ${POSTGRES_USER:-pulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pulse_dev_password}
+      # Предсказуемая сортировка русских строк и быстрый initdb.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "${HOST_DB_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pulse} -d ${POSTGRES_DB:-pulse_shop}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks: [pulse-net]
+
+  redis:
+    image: redis:8-alpine
+    container_name: pulse-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "${HOST_REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [pulse-net]
+
+  # Разовая задача: применяет миграции Alembic до старта приложения.
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pulse-migrate
+    restart: "no"
+    env_file: [.env]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+    networks: [pulse-net]
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pulse-backend
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DEBUG: ${DEBUG:-true}
+      DATABASE_URL: ${DATABASE_URL}
+      # Отдельная база для тестов: проверки не должны трогать данные стенда.
+      TEST_DATABASE_URL: ${TEST_DATABASE_URL:-postgresql+asyncpg://pulse:pulse_dev_password@db:5432/pulse_test}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      MEDIA_ROOT: ${MEDIA_ROOT:-/app/media}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8090}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-fake}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8090}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:8090}
+    volumes:
+      - media-data:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      # Приложение не поднимается, пока схема БД не актуальна —
+      # иначе первый же запрос упал бы на «relation does not exist».
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${HOST_BACKEND_PORT:-8010}:8000"
+    networks: [pulse-net]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pulse-frontend
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      # SSR-сервер ходит в backend по внутренней сети, а не через Nginx.
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://backend:8000}
+      PORT: "3000"
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    networks: [pulse-net]
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: pulse-nginx
+    restart: unless-stopped
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "${HOST_WEB_PORT:-8090}:80"
+    depends_on:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/nginx-health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [pulse-net]
+
+volumes:
+  db-data:
+  redis-data:
+  media-data:
+
+networks:
+  pulse-net:
+    driver: bridge

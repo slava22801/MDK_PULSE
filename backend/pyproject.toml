@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling>=1.24.2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pulse-backend"
+version = "0.1.0"
+description = "ПУЛЬС — интернет-магазин компьютерных комплектующих. Backend API."
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.116.0",
+  "uvicorn[standard]>=0.35.0",
+  "pydantic>=2.11.0",
+  "pydantic-settings>=2.10.0",
+  "email-validator>=2.0.0",
+  # [asyncio] extra тянет greenlet, который async-движку SQLAlchemy нужен на импорте.
+  "sqlalchemy[asyncio]>=2.0.43",
+  "asyncpg>=0.30.0",
+  "alembic>=1.16.0",
+  # PyJWT вместо python-jose: у python-jose есть известные CVE в проверке подписи.
+  "pyjwt>=2.10.0",
+  # Напрямую bcrypt, без passlib: passlib не обновлялся с 2020 и конфликтует с bcrypt 5.
+  "bcrypt>=4.2.0",
+  "redis>=6.4.0",
+  "python-multipart>=0.0.20",
+  "boto3>=1.40.0",
+  "pillow>=11.0.0",
+  "aiofiles>=24.1.0",
+  "openpyxl>=3.1.5",
+  "httpx>=0.28.0",
+]
+
+# PEP 735. В отличие от optional-dependencies, группа ставится по умолчанию
+# при `uv sync` — и в том числе внутри Docker-образа, где нужен pytest/ruff.
+[dependency-groups]
+dev = [
+  "pytest>=8.4.0",
+  "pytest-asyncio>=1.1.0",
+  "httpx>=0.28.0",
+  "ruff>=0.13.0",
+]
+
+[project.scripts]
+pulse = "app.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.hatch.build.targets.sdist]
+include = ["app", "alembic", "tests", "pyproject.toml", "README.md"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# Alembic-скрипты генерируются с import вне верхнего уровня — не ругаемся.
+per-file-ignores = { "alembic/versions/*" = ["E402"] }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# Один цикл событий на всю сессию: движок SQLAlchemy создаётся на уровне
+# модуля и привязан к первому же циклу. С циклом на тест соединение
+# закрывалось бы после первого теста («Event loop is closed»).
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider --strict-markers"
+markers = [
+  "integration: требует поднятой PostgreSQL (TEST_DATABASE_URL)",
+]
+filterwarnings = ["ignore::DeprecationWarning"]
