@@ -10,7 +10,7 @@ import { redirect } from "react-router";
 
 import type { Route } from "./+types/logout";
 import { serverFetch } from "~/lib/api.server";
-import { clearAccessCookieHeader, readAccessToken } from "~/lib/auth-token";
+import { clearAccessCookieHeader, clearRefreshCookieHeader, readAccessToken, buildSetCookieHeaders } from "~/lib/auth-token";
 import { useAuthStore } from "~/stores/auth";
 
 /** GET /logout не должен быть ссылкой: выход — действие с побочным эффектом. */
@@ -33,5 +33,9 @@ export async function action({ request }: Route.ActionArgs) {
     }
   }
 
-  return redirect("/", { headers: { "Set-Cookie": clearAccessCookieHeader() } });
+  // Чистим обе cookie: оставленный refresh-токен иначе продолжил бы продлевать
+  // сессию на сервере после выхода из аккаунта.
+  return redirect("/", {
+    headers: buildSetCookieHeaders(clearAccessCookieHeader(), clearRefreshCookieHeader()),
+  });
 }

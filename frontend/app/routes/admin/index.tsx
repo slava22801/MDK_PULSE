@@ -21,7 +21,13 @@ import { ADMIN_NAV } from "~/lib/admin";
 export async function loader({ request }: Route.LoaderArgs) {
   const session = await requireAdminSession(request, { roles: ["manager", "admin"] });
   const home = ADMIN_NAV.find((item) => item.roles.includes(session.user.role));
-  throw redirect(home?.href ?? "/admin/orders");
+
+  // Если сессию продлили, обновлённые cookie должны уехать вместе с редиректом:
+  // loader не может менять заголовки стороннего ответа, а `throw redirect`
+  // отдаёт именно его.
+  throw redirect(home?.href ?? "/admin/orders", {
+    headers: session.setCookie ?? undefined,
+  });
 }
 
 export default function AdminIndexRoute() {

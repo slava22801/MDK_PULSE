@@ -7,7 +7,7 @@ import type { Route } from "./+types/register";
 import type { AuthPayload, NormalizedError, RegisterValues } from "~/lib/auth";
 import { normalizeError, registerSchema, zodIssuesToFields } from "~/lib/auth";
 import { ApiError, serverFetch } from "~/lib/api.server";
-import { readAccessToken, serializeAccessCookie } from "~/lib/auth-token";
+import { readAccessToken, serializeAccessCookie, serializeRefreshCookie, buildSetCookieHeaders } from "~/lib/auth-token";
 import { useAuthStore } from "~/stores/auth";
 import { FormField } from "~/widgets/form-field";
 import { SiteHeader } from "~/widgets/site-header";
@@ -70,8 +70,13 @@ export async function action({ request }: Route.ActionArgs) {
       }),
     });
 
+    // Refresh-токен — в httpOnly-cookie, чтобы сервер мог продлить сессию
+    // после истечения access-токена. см. комментарий в login.tsx.
     return redirect("/account", {
-      headers: { "Set-Cookie": serializeAccessCookie(payload.tokens.access_token, payload.tokens.expires_in) },
+      headers: buildSetCookieHeaders(
+        serializeAccessCookie(payload.tokens.access_token, payload.tokens.expires_in),
+        serializeRefreshCookie(payload.tokens.refresh_token),
+      ),
     });
   } catch (cause) {
     const error = normalizeError(cause);

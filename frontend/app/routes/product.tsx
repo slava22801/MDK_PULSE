@@ -14,6 +14,7 @@ import {
 } from "~/widgets/product-card";
 import { AddToCartButton, FavoriteButton, unavailableHint } from "~/widgets/product-actions";
 import { SiteHeader } from "~/widgets/site-header";
+import { SiteFooter } from "~/widgets/site-footer";
 
 export function meta({ data }: Route.MetaArgs): Route.MetaDescriptors {
   const product = data?.ok === true ? data.payload.product : null;
@@ -226,6 +227,7 @@ export default function Product({ loaderData }: Route.ComponentProps) {
             </a>
           </div>
         </main>
+        <SiteFooter />
       </div>
     );
   }
@@ -447,6 +449,7 @@ export default function Product({ loaderData }: Route.ComponentProps) {
           </section>
         ) : null}
       </main>
+      <SiteFooter />
     </div>
   );
 }

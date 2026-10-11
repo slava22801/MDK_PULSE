@@ -7,6 +7,8 @@ import {
   parseFacets,
   toInputNumber,
 } from "~/lib/catalog";
+import { plural } from "~/lib/format";
+import { SlidersHorizontal } from "~/widgets/icons";
 
 /**
  * Панель фильтров каталога.
@@ -30,6 +32,8 @@ export type FilterPanelProps = {
   onReset: () => void;
   /** Префикс для id полей: на мобильном панель открыта вместе с десктопной. */
   idPrefix?: string;
+  /** Число товаров в выдаче — показывается в заголовке панели. */
+  resultCount?: number;
 };
 
 function safeId(value: string): string {
@@ -37,13 +41,13 @@ function safeId(value: string): string {
 }
 
 const INPUT_CLASS =
-  "w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 " +
-  "placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 " +
-  "focus-visible:outline-pulse-500 disabled:cursor-not-allowed disabled:bg-slate-50";
+  "h-9 w-full rounded-control border border-slate-200 bg-white px-2.5 text-xs text-slate-900 " +
+  "placeholder:text-slate-600 focus-visible:outline-2 focus-visible:outline-offset-2 " +
+  "focus-visible:outline-pulse-600 disabled:cursor-not-allowed disabled:bg-slate-50";
 
 const CHECKBOX_CLASS =
-  "h-4 w-4 shrink-0 rounded border-slate-300 text-pulse-600 accent-pulse-600 " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pulse-500";
+  "h-4 w-4 shrink-0 rounded-[0.25rem] border-slate-300 text-pulse-600 accent-pulse-600 " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pulse-600";
 
 function FilterGroup({
   title,
@@ -55,9 +59,9 @@ function FilterGroup({
   children: React.ReactNode;
 }) {
   return (
-    <fieldset className="border-t border-slate-200 pt-4 first:border-t-0 first:pt-0">
-      <legend className="w-full pb-2 text-sm font-semibold text-slate-900">{title}</legend>
-      {hint ? <p className="mb-2 text-xs text-slate-500">{hint}</p> : null}
+    <fieldset className="border-b border-slate-200 py-4 first:pt-0 last:border-b-0 last:pb-0">
+      <legend className="w-full pb-2.5 text-sm font-semibold text-slate-900">{title}</legend>
+      {hint ? <p className="mb-2 text-[0.6875rem] text-slate-600">{hint}</p> : null}
       {children}
     </fieldset>
   );
@@ -82,7 +86,9 @@ function CheckRow({
     <label
       htmlFor={id}
       title={disabled && !checked ? "Нет товаров под это значение" : undefined}
-      className={`flex items-center gap-2.5 py-1 text-sm ${disabled && !checked ? "cursor-not-allowed" : "cursor-pointer"}`}
+      className={`flex items-center gap-2.5 py-1 text-[0.8125rem] ${
+        disabled && !checked ? "cursor-not-allowed" : "cursor-pointer"
+      }`}
     >
       <input
         id={id}
@@ -92,8 +98,10 @@ function CheckRow({
         onChange={onChange}
         className={CHECKBOX_CLASS}
       />
-      <span className={disabled && !checked ? "text-slate-400" : "text-slate-700"}>{label}</span>
-      {count !== undefined ? <span className="ml-auto text-xs text-slate-400">{count}</span> : null}
+      <span className={disabled && !checked ? "text-slate-400" : "text-slate-900"}>{label}</span>
+      {count !== undefined ? (
+        <span className="ml-auto text-[0.6875rem] text-slate-600">{count}</span>
+      ) : null}
     </label>
   );
 }
@@ -180,7 +188,7 @@ function NumberRange({
           className={INPUT_CLASS}
         />
       </div>
-      {unit ? <p className="mt-1 text-xs text-slate-500">Единица: {unit}</p> : null}
+      {unit ? <p className="mt-1 text-[0.6875rem] text-slate-600">Единица: {unit}</p> : null}
     </div>
   );
 }
@@ -223,7 +231,14 @@ const RATING_OPTIONS = [
   { value: "4.5", label: "4,5 и выше" },
 ] as const;
 
-export function FilterPanel({ facets, selection, onPatch, onReset, idPrefix = "f" }: FilterPanelProps) {
+export function FilterPanel({
+  facets,
+  selection,
+  onPatch,
+  onReset,
+  idPrefix = "f",
+  resultCount,
+}: FilterPanelProps) {
   const uid = useId();
   const parsed = parseFacets(facets);
   const key = (raw: string): string => `${idPrefix}-${uid.replace(/[^a-zA-Z0-9]+/g, "")}-${safeId(raw)}`;
@@ -235,7 +250,19 @@ export function FilterPanel({ facets, selection, onPatch, onReset, idPrefix = "f
   );
 
   return (
-    <div className="space-y-4">
+    <div className="rounded-card border border-slate-200 bg-white p-5">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-4">
+        <h2 className="text-[1.1875rem] font-bold text-slate-900">Фильтры</h2>
+        <SlidersHorizontal className="h-5 w-5 text-slate-400" aria-hidden="true" />
+      </div>
+
+      {resultCount !== undefined ? (
+        <p className="pt-3 text-[0.6875rem] text-slate-600">
+          Подходит {resultCount} {plural(resultCount, "товар", "товара", "товаров")}
+        </p>
+      ) : null}
+
+      <div className="mt-4">
       <FilterGroup title="Производитель" hint="Выбирается один бренд за раз.">
         <ChoiceList
           options={facets.brands.map((brand) => ({
@@ -287,7 +314,7 @@ export function FilterPanel({ facets, selection, onPatch, onReset, idPrefix = "f
             ) : null}
           </div>
           {otherStatuses.length > 0 ? (
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-[0.6875rem] text-slate-600">
               В подборке также:{" "}
               {otherStatuses
                 .map((item) => `${item.label ?? item.value} (${item.count})`)
@@ -366,7 +393,7 @@ export function FilterPanel({ facets, selection, onPatch, onReset, idPrefix = "f
           />
 
           <div>
-            <label htmlFor={key("rating")} className="mb-1 block text-sm font-medium text-slate-800">
+            <label htmlFor={key("rating")} className="mb-1 block text-[0.8125rem] font-medium text-slate-900">
               Рейтинг
             </label>
             <select
@@ -384,7 +411,7 @@ export function FilterPanel({ facets, selection, onPatch, onReset, idPrefix = "f
           </div>
 
           <div>
-            <label htmlFor={key("warranty")} className="mb-1 block text-sm font-medium text-slate-800">
+            <label htmlFor={key("warranty")} className="mb-1 block text-[0.8125rem] font-medium text-slate-900">
               Гарантия
             </label>
             <select
@@ -409,13 +436,14 @@ export function FilterPanel({ facets, selection, onPatch, onReset, idPrefix = "f
           </div>
         </div>
       </FilterGroup>
+      </div>
 
       <button
         type="button"
         onClick={onReset}
-        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+        className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-control border border-slate-200 bg-white px-4 text-[0.9375rem] font-semibold text-slate-900 transition-colors hover:border-pulse-400 hover:text-pulse-600"
       >
-        Сбросить всё
+        Сбросить фильтры
       </button>
     </div>
   );

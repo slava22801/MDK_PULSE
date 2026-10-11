@@ -16,6 +16,7 @@ import { useCartStore } from "~/stores/cart";
 import { useFavoritesStore } from "~/stores/favorites";
 import { AvailabilityBadge, ProductCardTile } from "~/widgets/product-card";
 import { SiteHeader } from "~/widgets/site-header";
+import { SiteFooter } from "~/widgets/site-footer";
 
 export function meta(): Route.MetaDescriptors {
   return [
@@ -253,6 +254,7 @@ export default function Favorites({ loaderData }: Route.ComponentProps) {
             </div>
           </div>
         </main>
+        <SiteFooter />
       </div>
     );
   }
@@ -321,6 +323,7 @@ export default function Favorites({ loaderData }: Route.ComponentProps) {
           </>
         )}
       </main>
+      <SiteFooter />
     </div>
   );
 }

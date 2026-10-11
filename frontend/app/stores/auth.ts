@@ -95,7 +95,11 @@ export const useAuthStore = create<AuthState>()((set, get) => {
   const persist = (state: PersistedState) => {
     writePersisted(state);
     if (state.accessToken) {
-      writeAccessCookie(state.accessToken, remainingSeconds(state.expiresAt));
+      // Max-Age считаем по остатку жизни токена, но не меньше часа: cookie,
+      // которая умерла бы раньше токена, оставляет страницы без сессии, хотя
+      // токен ещё жив (см. DEFAULT_MAX_AGE_SECONDS в `~/lib/auth-token`).
+      const remaining = remainingSeconds(state.expiresAt);
+      writeAccessCookie(state.accessToken, Math.max(remaining, DEFAULT_MAX_AGE_SECONDS));
     } else {
       clearAccessCookie();
     }

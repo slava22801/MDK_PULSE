@@ -7,7 +7,7 @@ import type { Route } from "./+types/login";
 import type { AuthPayload, LoginValues, NormalizedError } from "~/lib/auth";
 import { loginSchema, normalizeError, zodIssuesToFields } from "~/lib/auth";
 import { ApiError, serverFetch } from "~/lib/api.server";
-import { readAccessToken, serializeAccessCookie } from "~/lib/auth-token";
+import { readAccessToken, serializeAccessCookie, serializeRefreshCookie, buildSetCookieHeaders } from "~/lib/auth-token";
 import { useAuthStore } from "~/stores/auth";
 import { FormField } from "~/widgets/form-field";
 import { SiteHeader } from "~/widgets/site-header";
@@ -58,8 +58,14 @@ export async function action({ request }: Route.ActionArgs) {
       body: JSON.stringify({ email: parsed.data.email, password: parsed.data.password }),
     });
 
+    // Обе cookie обязательны: access-token живёт 30 минут, а серверный loader
+    // после этого обновляет сессию по refresh-токену из httpOnly-cookie — без
+    // неё пользователя выкидывало бы на /login каждые полчаса.
     return redirect("/account", {
-      headers: { "Set-Cookie": serializeAccessCookie(payload.tokens.access_token, payload.tokens.expires_in) },
+      headers: buildSetCookieHeaders(
+        serializeAccessCookie(payload.tokens.access_token, payload.tokens.expires_in),
+        serializeRefreshCookie(payload.tokens.refresh_token),
+      ),
     });
   } catch (cause) {
     const error = normalizeError(cause);

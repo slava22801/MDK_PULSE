@@ -5,6 +5,7 @@ import { normalizeError } from "~/lib/auth";
 import { AVAILABILITY_LABEL } from "~/lib/catalog";
 import { useCartStore } from "~/stores/cart";
 import { useFavoritesStore } from "~/stores/favorites";
+import { ShoppingCart } from "~/widgets/icons";
 
 /**
  * Кнопки «В корзину» и «В избранное».
@@ -86,11 +87,20 @@ export function AddToCartButton({
         aria-label={`В корзину: ${productName}`}
         className={
           compact
-            ? "flex w-full items-center justify-center gap-1 rounded-lg bg-pulse-600 px-2 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-pulse-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-            : "flex w-full items-center justify-center gap-1.5 rounded-xl bg-pulse-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-pulse-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            ? "flex w-full items-center justify-center gap-1 rounded-control bg-pulse-600 px-2 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-pulse-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            : "flex w-full items-center justify-center gap-2 rounded-control bg-pulse-600 px-[1.125rem] py-2.5 text-[0.9375rem] font-semibold text-white transition-colors hover:bg-pulse-700 disabled:cursor-not-allowed disabled:bg-slate-300"
         }
       >
-        {disabled ? "Нет в наличии" : phase === "busy" ? "Добавляем…" : "В корзину"}
+        {disabled ? (
+          "Нет в наличии"
+        ) : phase === "busy" ? (
+          "Добавляем…"
+        ) : (
+          <>
+            {compact ? null : <ShoppingCart className="h-5 w-5 shrink-0" />}
+            В корзину
+          </>
+        )}
       </button>
       {/* Статус сюда, а не в заголовок кнопки: иначе он перескакивал бы при
           каждом добавлении и мешал тем, кто читает только подпись. */}
@@ -113,10 +123,21 @@ export type FavoriteButtonProps = {
   productId: string;
   productName: string;
   compact?: boolean;
+  /**
+   * Только иконка — так кнопка выглядит в карточке товара по макету, где
+   * избранное стоит в углу фотографии рядом со сравнением.
+   */
+  iconOnly?: boolean;
   className?: string;
 };
 
-export function FavoriteButton({ productId, productName, compact = false, className }: FavoriteButtonProps) {
+export function FavoriteButton({
+  productId,
+  productName,
+  compact = false,
+  iconOnly = false,
+  className,
+}: FavoriteButtonProps) {
   const ids = useFavoritesStore((state) => state.ids);
   const toggle = useFavoritesStore((state) => state.toggle);
   const isFavorite = ids.includes(productId);
@@ -134,6 +155,12 @@ export function FavoriteButton({ productId, productName, compact = false, classN
     }
   };
 
+  const shape = iconOnly
+    ? "flex h-9 w-9 items-center justify-center rounded-pill bg-white/90 text-slate-600 backdrop-blur transition-colors hover:bg-white hover:text-pulse-600 disabled:opacity-60"
+    : compact
+      ? "flex w-full items-center justify-center rounded-control border border-slate-200 bg-white px-2 py-1.5 text-slate-600 transition-colors hover:border-pulse-400 hover:text-pulse-700 disabled:opacity-60"
+      : "flex w-full items-center justify-center rounded-control border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-pulse-400 hover:text-pulse-700 disabled:opacity-60";
+
   return (
     <button
       type="button"
@@ -143,15 +170,10 @@ export function FavoriteButton({ productId, productName, compact = false, classN
       // скринридера и голосового ввода не читается вообще.
       aria-pressed={isFavorite}
       aria-label={isFavorite ? `Убрать из избранного: ${productName}` : `В избранное: ${productName}`}
-      className={[
-        compact
-          ? "flex w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-slate-600 transition-colors hover:border-pulse-400 hover:text-pulse-700 disabled:opacity-60"
-          : "flex w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-pulse-400 hover:text-pulse-700 disabled:opacity-60",
-        className ?? "",
-      ].join(" ")}
+      className={[shape, className ?? ""].join(" ")}
     >
       <HeartIcon filled={isFavorite} />
-      {!compact ? <span>{isFavorite ? "В избранном" : "В избранное"}</span> : null}
+      {!iconOnly && !compact ? <span>{isFavorite ? "В избранном" : "В избранное"}</span> : null}
     </button>
   );
 }
@@ -161,7 +183,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
     <svg
       viewBox="0 0 24 24"
       aria-hidden="true"
-      className={`h-4 w-4 ${filled ? "fill-rose-600 text-rose-600" : "fill-none text-current"}`}
+      className={`h-4 w-4 ${filled ? "fill-pulse-600 text-pulse-600" : "fill-none text-current"}`}
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"

@@ -1,10 +1,22 @@
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Form, useRouteLoaderData } from "react-router";
 
 import { useAuthStore } from "~/stores/auth";
 import { useCartStore } from "~/stores/cart";
 import { useFavoritesStore } from "~/stores/favorites";
+
+import {
+  ChartColumn,
+  ChevronDown,
+  Heart,
+  MapPin,
+  Menu,
+  Search,
+  ShoppingCart,
+  UserRound,
+  Zap,
+} from "~/widgets/icons";
 
 /** Данные корневого loader'а — источник счётчиков (см. `app/root.tsx`). */
 type RootData = {
@@ -25,22 +37,86 @@ type SiteHeaderProps = {
   authenticated: boolean;
 };
 
-/** Значок с числом: показываем, только когда есть что считать. */
-function Counter({ count, children }: { count: number; children: ReactNode }) {
-  return (
+/** Быстрые разделы третьей полосы макета. */
+const QUICK_LINKS = [
+  { label: "Видеокарты", href: "/catalog/videokarty" },
+  { label: "Процессоры", href: "/catalog/processory" },
+  { label: "Память и накопители", href: "/catalog/operativnaya-pamyat" },
+  { label: "Периферия", href: "/catalog/periferiya" },
+  { label: "Собрать ПК", href: "/catalog/sborka-pk" },
+  { label: "Бренды", href: "/catalog/brendy" },
+];
+
+/** Сервисные ссылки верхней полосы. */
+const SERVICE_LINKS = [
+  { label: "Доставка и оплата", href: "/catalog" },
+  { label: "Гарантия и возврат", href: "/catalog" },
+  { label: "Магазины", href: "/catalog" },
+];
+
+/**
+ * Значок-подпись шапки: иконка, основная подпись и вторая строка мелким шрифтом.
+ *
+ * Вторая строка в макете занята счётчиками («3 товара») и подсказкой
+ * («Регистрация»), поэтому она необязательна.
+ */
+function HeaderAction({
+  icon,
+  label,
+  hint,
+  href,
+  count,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  hint?: string;
+  href?: string;
+  count?: number;
+  onClick?: () => void;
+}) {
+  const content = (
     <>
-      {children}
-      {count > 0 ? (
-        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[0.65rem] leading-none font-bold text-white">
-          {count > 99 ? "99+" : count}
-        </span>
+      <span className="relative">
+        {icon}
+        {count !== undefined && count > 0 ? (
+          <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-pulse-600 px-1 text-[0.625rem] leading-none font-bold text-white">
+            {count > 99 ? "99+" : count}
+          </span>
+        ) : null}
+      </span>
+      <span className="text-xs font-semibold whitespace-nowrap text-slate-900">{label}</span>
+      {hint ? (
+        <span className="text-[0.625rem] leading-tight whitespace-nowrap text-slate-600">{hint}</span>
       ) : null}
     </>
+  );
+
+  const className =
+    "flex flex-col items-center gap-0.5 rounded-control px-1.5 py-1 transition-opacity hover:opacity-70";
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      className={className}
+      aria-label={count !== undefined && count > 0 ? `${label}, товаров: ${count}` : label}
+    >
+      {content}
+    </a>
   );
 }
 
 /**
- * Общая шапка магазина.
+ * Шапка магазина — три полосы по макету:
+ * сервисная навигация, основная навигация и быстрые разделы.
  *
  * Ссылки намеренно обычные `<a>`, а не `<Link>`: часть маршрутов (например,
  * /account) в loader обращается к backend через serverFetch, который на клиенте
@@ -88,37 +164,59 @@ export function SiteHeader({ authenticated }: SiteHeaderProps) {
     }
   };
 
+  const cartHint = cartCount > 0 ? `${cartCount} товаров` : "Пока пусто";
+  const favoritesHint = favoritesCount > 0 ? `${favoritesCount} товаров` : "Пока пусто";
+
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="container-pulse flex h-16 items-center gap-4">
-        <a href="/" className="flex items-center gap-2.5">
-          <span
-            aria-hidden="true"
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-pulse-600 text-white"
+    <header className="sticky top-0 z-40 bg-white shadow-card">
+      {/* Полоса 1: город, сервисные ссылки и телефон. */}
+      <div className="hidden h-10 items-center justify-between bg-slate-50 px-4 sm:flex lg:px-8 xl:px-16">
+        <button
+          type="button"
+          className="flex items-center gap-1.5 rounded-pill px-1 py-0.5 text-[0.8125rem] font-semibold text-slate-900 transition-opacity hover:opacity-70"
+        >
+          <MapPin className="h-[0.9375rem] w-[0.9375rem] text-pulse-600" />
+          Москва
+          <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+        </button>
+
+        <div className="flex items-center gap-7">
+          {SERVICE_LINKS.map((link) => (
+            <a
+              key={link.label}
+              href={link.href}
+              className="text-[0.8125rem] text-slate-600 transition-colors hover:text-pulse-600"
+            >
+              {link.label}
+            </a>
+          ))}
+          <a
+            href="tel:88007002424"
+            className="text-[0.8125rem] font-semibold text-slate-900 transition-opacity hover:opacity-70"
           >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor">
-              <path
-                d="M2 12h4l3-8 4 16 3-8h6"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            8 800 700-24-24
+          </a>
+        </div>
+      </div>
+
+      {/* Полоса 2: логотип, каталог, поиск и пользовательские действия. */}
+      <div className="flex h-[4.5rem] items-center gap-6 px-4 lg:px-8 xl:px-16">
+        <a href="/" className="flex shrink-0 items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-control bg-pulse-600 text-white">
+            <Zap className="h-6 w-6" strokeWidth={2} />
           </span>
-          <span className="text-xl font-bold tracking-tight text-slate-900">ПУЛЬС</span>
+          <span className="text-[1.8125rem] leading-none font-extrabold tracking-tight text-slate-900">
+            пульс
+          </span>
         </a>
 
-        <nav aria-label="Основное меню" className="hidden items-center gap-6 md:flex">
-          <a href="/catalog" className="text-sm font-medium text-slate-700 hover:text-pulse-700">
-            Каталог
-          </a>
-          <a href="/compare" className="text-sm font-medium text-slate-700 hover:text-pulse-700">
-            Сравнение
-          </a>
-          <a href="/favorites" className="text-sm font-medium text-slate-700 hover:text-pulse-700">
-            Избранное
-          </a>
-        </nav>
+        <a
+          href="/catalog"
+          className="hidden h-11 shrink-0 items-center gap-2 rounded-control bg-pulse-600 px-[1.125rem] text-[0.9375rem] font-semibold text-white transition-colors hover:bg-pulse-700 sm:inline-flex"
+        >
+          <Menu className="h-5 w-5" />
+          Каталог
+        </a>
 
         {/* Поиск — обычная GET-форма: она ведёт в каталог и работает без
             JavaScript, а её результат выглядит как обычная страница с
@@ -127,7 +225,7 @@ export function SiteHeader({ authenticated }: SiteHeaderProps) {
           method="get"
           action="/catalog"
           role="search"
-          className="ms-auto hidden max-w-xs flex-1 items-center gap-2 sm:flex"
+          className="flex h-[2.875rem] min-w-0 flex-1 items-center justify-between gap-2 rounded-control border border-slate-200 bg-slate-50 px-4 focus-within:border-pulse-400 focus-within:bg-white"
         >
           <label htmlFor="site-search" className="sr-only">
             Поиск по каталогу
@@ -136,93 +234,93 @@ export function SiteHeader({ authenticated }: SiteHeaderProps) {
             id="site-search"
             type="search"
             name="q"
-            placeholder="Ryzen 7, SSD 2 ТБ…"
-            className="w-full flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400"
+            placeholder="Товар, артикул или бренд"
+            className="min-w-0 flex-1 bg-transparent text-sm text-slate-900 placeholder:text-slate-600 focus:outline-none"
           />
-          <button
-            type="submit"
-            className="shrink-0 rounded-lg bg-pulse-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-pulse-700"
-          >
-            Найти
+          <button type="submit" aria-label="Найти" className="shrink-0 text-slate-600 hover:text-pulse-600">
+            <Search className="h-5 w-5" />
           </button>
         </Form>
 
-        <div className="ml-auto flex items-center gap-2 sm:ml-0">
-          {/* Избранное показываем и гостю: `/favorites` гостю отвечает 401,
-              но сама страница объясняет это и предлагает войти — молчаливая
-              кнопка была бы хуже явной. */}
-          <a
-            href="/favorites"
-            className="relative rounded-lg px-2.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
-            aria-label={
-              favoritesCount > 0
-                ? `Избранное, товаров: ${favoritesCount}`
-                : "Избранное"
-            }
-          >
-            <Counter count={favoritesCount}>
-              <span className="hidden sm:inline">Избранное</span>
-              <span className="sm:hidden" aria-hidden="true">
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor">
-                  <path
-                    d="M20.8 6.6a5 5 0 00-7.1 0L12 8.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 22l8.8-8.3a5 5 0 000-7.1z"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-              <span className="sr-only sm:hidden">Избранное</span>
-            </Counter>
-          </a>
-
-          <a
-            href="/cart"
-            className="relative inline-flex items-center rounded-lg bg-pulse-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-pulse-700"
-            aria-label={cartCount > 0 ? `Корзина, товаров: ${cartCount}` : "Корзина"}
-          >
-            <Counter count={cartCount}>Корзина</Counter>
-          </a>
-
+        <div className="flex shrink-0 items-center gap-5.5">
           {authenticated ? (
             <>
-              <a
+              <HeaderAction
+                icon={<UserRound className="h-5 w-5 text-slate-900" />}
+                label="Кабинет"
                 href="/account"
-                className="rounded-lg px-2.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
-              >
-                Кабинет
-              </a>
+              />
               <form method="post" action="/logout" onSubmit={handleLogout}>
                 <button
                   type="submit"
                   disabled={pending}
-                  className="rounded-lg px-2.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+                  className="text-[0.625rem] leading-tight whitespace-nowrap text-slate-600 transition-colors hover:text-pulse-600 disabled:opacity-50"
                 >
-                  <span className="hidden sm:inline">Выйти</span>
-                  <span className="sm:hidden" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor">
-                      <path
-                        d="M15 17l5-5-5-5M20 12H9M12 20H6a2 2 0 01-2-2V6a2 2 0 012-2h6"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </span>
-                  <span className="sr-only sm:hidden">Выйти</span>
+                  Выйти
                 </button>
               </form>
             </>
           ) : (
-            <a
+            <HeaderAction
+              icon={<UserRound className="h-5 w-5 text-slate-900" />}
+              label="Войти"
+              hint="Регистрация"
               href="/login"
-              className="rounded-lg px-2.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
-            >
-              Войти
-            </a>
+            />
           )}
+
+          {/* Избранное показываем и гостю: `/favorites` гостю отвечает 401,
+              но сама страница объясняет это и предлагает войти — молчаливая
+              кнопка была бы хуже явной. */}
+          <span className="hidden sm:contents">
+            <HeaderAction
+              icon={<Heart className="h-5 w-5 text-slate-900" />}
+              label="Избранное"
+              hint={favoritesHint}
+              href="/favorites"
+              count={favoritesCount}
+            />
+          </span>
+
+          <span className="hidden md:contents">
+            <HeaderAction
+              icon={<ChartColumn className="h-5 w-5 text-slate-900" />}
+              label="Сравнение"
+              href="/compare"
+            />
+          </span>
+
+          <HeaderAction
+            icon={<ShoppingCart className="h-5 w-5 text-pulse-600" />}
+            label="Корзина"
+            hint={cartHint}
+            href="/cart"
+            count={cartCount}
+          />
         </div>
       </div>
+
+      {/* Полоса 3: быстрые разделы. */}
+      <nav
+        aria-label="Быстрые разделы"
+        className="flex h-12 items-center gap-6 overflow-x-auto border-t border-slate-200 px-4 whitespace-nowrap lg:justify-between lg:px-8 xl:px-16"
+      >
+        <a
+          href="/catalog"
+          className="shrink-0 text-sm font-semibold text-pulse-600 transition-colors hover:text-pulse-700"
+        >
+          Акции и скидки
+        </a>
+        {QUICK_LINKS.map((link) => (
+          <a
+            key={link.label}
+            href={link.href}
+            className="shrink-0 text-sm font-medium text-slate-900 transition-opacity hover:opacity-60"
+          >
+            {link.label}
+          </a>
+        ))}
+      </nav>
     </header>
   );
 }

@@ -1,32 +1,72 @@
 @import "tailwindcss";
 
 /*
- * Дизайн-токены магазина «ПУЛЬС». Раздел 9 ТЗ требует единый UI-kit:
- * контрастный текст, читаемость с 320px, единые состояния — всё держится
- * на этих переменных, а не на разбросанных по компонентам hex-значениях.
+ * Дизайн-токены магазина «ПУЛЬС».
+ *
+ * Значения перенесены из макета Figma («Пульс — Главная», «Пульс — Видеокарты»):
+ * зелёный брендовый #16A34A, холодный нейтральный графит вместо синего и
+ * радиусы 4/6/8/12/16 px. Шкалы `pulse-*` и `slate-*` намеренно переопределены,
+ * а не заведены заново: весь существующий интерфейс собран на этих именах,
+ * поэтому перекраска токенов приводит витрину к макету целиком, не трогая
+ * разметку каждой страницы.
  */
 @theme {
-  --color-pulse-50: oklch(0.97 0.02 264);
-  --color-pulse-100: oklch(0.93 0.045 264);
-  --color-pulse-200: oklch(0.86 0.085 264);
-  --color-pulse-300: oklch(0.76 0.135 263);
-  --color-pulse-400: oklch(0.66 0.185 262);
-  --color-pulse-500: oklch(0.58 0.222 261);
-  --color-pulse-600: oklch(0.5 0.226 261);
-  --color-pulse-700: oklch(0.43 0.2 262);
-  --color-pulse-800: oklch(0.36 0.16 263);
-  --color-pulse-900: oklch(0.29 0.115 264);
-  --color-pulse-950: oklch(0.19 0.075 265);
+  /* Брендовый зелёный, якорь — #16A34A из макета. */
+  --color-pulse-50: #ecfdf5;
+  --color-pulse-100: #d9f9e4;
+  --color-pulse-200: #b4efcb;
+  --color-pulse-300: #7fdea9;
+  --color-pulse-400: #45c67f;
+  --color-pulse-500: #1eab5e;
+  --color-pulse-600: #16a34a;
+  --color-pulse-700: #158040;
+  --color-pulse-800: #166437;
+  --color-pulse-900: #14532f;
+  --color-pulse-950: #07261a;
 
-  --color-accent-400: oklch(0.8 0.17 195);
-  --color-accent-500: oklch(0.72 0.16 195);
-  --color-accent-600: oklch(0.63 0.14 195);
+  /* Нейтрали макета: холоднее и светлее стандартного slate. */
+  --color-slate-50: #f4f5f7;
+  --color-slate-100: #fafbfc;
+  --color-slate-200: #e3e6eb;
+  --color-slate-300: #d3d8df;
+  --color-slate-400: #b8bec7;
+  --color-slate-500: #97a0ac;
+  --color-slate-600: #69717d;
+  --color-slate-700: #4a515b;
+  --color-slate-800: #2e343c;
+  --color-slate-900: #181b20;
+  --color-slate-950: #0f1115;
+
+  /* Акцент кампании — оранжевый лейбл из макета. */
+  --color-accent-300: #ffd3b0;
+  --color-accent-400: #ffb98a;
+  --color-accent-500: #ffa768;
+  --color-accent-600: #ef8a45;
+  --color-accent-700: #d26c2b;
+
+  /* Тёмные поверхности: подвал, промо-блоки. */
+  --color-ink-900: #20242b;
+  --color-ink-800: #2b3038;
+  --color-ink-700: #38332b;
+  --color-ink-muted: #b8bec7;
+
+  /* Зелёный текст «в наличии» и мягкая подложка бейджей. */
+  --color-brand-tint: #ecfdf5;
+  --color-brand-ink: #24764b;
 
   --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --radius-card: 0.875rem;
 
-  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.06), 0 8px 24px -12px rgb(15 23 42 / 0.18);
-  --shadow-card-hover: 0 2px 4px 0 rgb(15 23 42 / 0.08), 0 16px 32px -16px rgb(15 23 42 / 0.28);
+  /* Радиусы макета: метка, поле, кнопка, карточка, промо-панель. */
+  --radius-badge: 0.25rem;
+  --radius-pill: 0.375rem;
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-panel: 1rem;
+
+  /* Макет плоский: разделение карточек даёт белый фон на #F4F5F7,
+     поэтому тень только для состояния наведения. */
+  --shadow-card: 0 1px 2px 0 rgb(24 27 32 / 0.04);
+  --shadow-card-hover: 0 8px 24px -12px rgb(24 27 32 / 0.18);
 }
 
 @layer base {
@@ -40,7 +80,7 @@
   }
 
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-pulse-500;
+    @apply outline-2 outline-offset-2 outline-pulse-600;
   }
 
   /* Уважаем системную настройку уменьшения анимации. */
@@ -55,8 +95,9 @@
 }
 
 @layer components {
+  /* Макет рассчитан на 1440 px с полями 64 px. */
   .container-pulse {
-    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8 xl:px-16;
   }
 
   .card {
@@ -65,5 +106,20 @@
 
   .skeleton {
     @apply animate-pulse rounded-md bg-slate-200;
+  }
+
+  /* Шапка магазина — белые полосы над фоном страницы #F4F5F7. */
+  .surface-bar {
+    @apply bg-white;
+  }
+
+  /* Заголовок раздела макета: 30 px / Bold. */
+  .section-title {
+    @apply text-[1.875rem] leading-tight font-bold text-slate-900;
+  }
+
+  /* Надзаголовок бренда: 11 px / Bold с разрядкой. */
+  .eyebrow {
+    @apply text-[0.6875rem] font-bold tracking-wide;
   }
 }

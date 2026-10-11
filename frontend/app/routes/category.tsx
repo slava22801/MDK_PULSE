@@ -4,7 +4,7 @@ import { useNavigation, useSearchParams } from "react-router";
 import type { Route } from "./+types/category";
 import { describeApiError } from "~/lib/api-error";
 import { ApiError, serverFetch } from "~/lib/api.server";
-import type { CategoryResponse, FilterPatch, SortOptions } from "~/lib/catalog";
+import type { CategoryResponse, FilterPatch, SortKey, SortOptions } from "~/lib/catalog";
 import {
   activeFilterCount,
   applyPatch,
@@ -18,7 +18,9 @@ import { plural } from "~/lib/format";
 import { CatalogPagination } from "~/widgets/catalog-pagination";
 import { CatalogEmpty, CatalogError, CatalogToolbar, EMPTY_FACETS } from "~/widgets/catalog-ui";
 import { FilterPanel } from "~/widgets/filter-panel";
+import { ChevronRight, Gpu, SlidersHorizontal } from "~/widgets/icons";
 import { ProductGrid, ProductGridSkeleton } from "~/widgets/product-card";
+import { SiteFooter } from "~/widgets/site-footer";
 import { SiteHeader } from "~/widgets/site-header";
 
 export function meta({ data }: Route.MetaArgs): Route.MetaDescriptors {
@@ -76,26 +78,30 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   }
 }
 
-function Breadcrumbs({ items, current }: { items: { name: string; slug: string }[]; current: string }) {
+function Breadcrumbs({
+  items,
+  current,
+}: {
+  items: { name: string; slug: string }[];
+  current: string;
+}) {
   return (
-    <nav aria-label="Хлебные крошки" className="mb-3">
-      <ol className="flex flex-wrap items-center gap-1 text-sm text-slate-500">
+    <nav aria-label="Хлебные крошки">
+      <ol className="flex flex-wrap items-center gap-2.5 text-xs text-slate-600">
         <li>
-          <a href="/" className="hover:text-pulse-700">
+          <a href="/" className="transition-colors hover:text-pulse-600">
             Главная
           </a>
         </li>
         {items.map((item) => (
-          <li key={item.slug} className="flex items-center gap-1">
-            <span aria-hidden="true" className="text-slate-300">
-              /
-            </span>
+          <li key={item.slug} className="flex items-center gap-2.5">
+            <ChevronRight className="h-3 w-3 shrink-0 text-slate-400" aria-hidden="true" />
             {item.slug === current ? (
-              <span aria-current="page" className="font-medium text-slate-800">
+              <span aria-current="page" className="text-slate-900">
                 {item.name}
               </span>
             ) : (
-              <a href={`/catalog/${item.slug}`} className="hover:text-pulse-700">
+              <a href={`/catalog/${item.slug}`} className="transition-colors hover:text-pulse-600">
                 {item.name}
               </a>
             )}
@@ -140,6 +146,7 @@ export default function Category({ loaderData }: Route.ComponentProps) {
   const category = loaderData.ok ? loaderData.payload.category : null;
   const products = loaderData.ok ? loaderData.payload.products : null;
   const total = products ? products.total : 0;
+  const activeCount = activeFilterCount(selection);
 
   const panel = (
     <FilterPanel
@@ -148,6 +155,7 @@ export default function Category({ loaderData }: Route.ComponentProps) {
       onPatch={handlePatch}
       onReset={handleReset}
       idPrefix="category"
+      resultCount={total}
     />
   );
 
@@ -155,36 +163,41 @@ export default function Category({ loaderData }: Route.ComponentProps) {
     <div className="flex min-h-full flex-col">
       <SiteHeader authenticated={authenticated} />
 
-      <main className="container-pulse flex-1 py-6 sm:py-10">
+      <main className="container-pulse flex-1 pt-7 pb-12">
         {loaderData.ok ? (
           <Breadcrumbs items={loaderData.payload.breadcrumb} current={loaderData.payload.category.slug} />
         ) : (
           <Breadcrumbs items={[]} current={slug} />
         )}
 
-        <header className="mb-5">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+        <header className="mt-6 flex flex-wrap items-baseline gap-4.5">
+          <h1 className="text-[2.375rem] leading-tight font-bold text-slate-900">
             {category ? category.name : "Категория"}
           </h1>
-          <p className="mt-1.5 text-sm text-slate-600" aria-live="polite">
-            {loaderData.ok ? (
-              <>
-                Найдено {total} {plural(total, "товар", "товара", "товаров")}
-              </>
-            ) : (
-              "Список товаров этой категории сейчас недоступен"
-            )}
+          <p className="text-[0.9375rem] text-slate-600" aria-live="polite">
+            {loaderData.ok
+              ? `${total} ${plural(total, "товар", "товара", "товаров")}`
+              : "Список товаров этой категории сейчас недоступен"}
           </p>
         </header>
 
         {category && category.children.length > 0 ? (
-          <nav aria-label="Подкатегории" className="mb-6">
-            <ul className="flex flex-wrap gap-2">
+          <nav aria-label="Подкатегории" className="mt-6">
+            <ul className="flex flex-wrap gap-2.5">
+              <li>
+                <a
+                  href={`/catalog/${category.slug}`}
+                  aria-current="page"
+                  className="inline-flex items-center rounded-control border border-ink-900 bg-ink-900 px-4 py-2.5 text-[0.8125rem] font-medium text-white"
+                >
+                  Все {category.name.toLowerCase()}
+                </a>
+              </li>
               {category.children.map((child) => (
                 <li key={child.id}>
                   <a
                     href={`/catalog/${child.slug}`}
-                    className="inline-block rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-pulse-300 hover:text-pulse-700"
+                    className="inline-flex items-center rounded-control border border-slate-200 bg-white px-4 py-2.5 text-[0.8125rem] font-medium text-slate-900 transition-colors hover:border-pulse-400 hover:text-pulse-600"
                   >
                     {child.name}
                   </a>
@@ -194,24 +207,57 @@ export default function Category({ loaderData }: Route.ComponentProps) {
           </nav>
         ) : null}
 
-        <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-8">
+        <div className="mt-6 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-6">
           <aside className="hidden lg:block">
-            <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2 pb-4">
+            <div className="sticky top-44 max-h-[calc(100vh-13rem)] overflow-y-auto pb-2">
               {panel}
             </div>
           </aside>
 
-          <section aria-label="Товары">
+          <section aria-label="Товары" className="flex flex-col gap-4">
+            {/* Совет по выбору — тёмная плашка из макета. */}
+            <div className="flex flex-col gap-4 rounded-card bg-ink-900 p-5 sm:flex-row sm:items-center">
+              <Gpu className="h-8 w-8 shrink-0 text-accent-500" aria-hidden="true" />
+              <div className="flex flex-1 flex-col gap-1">
+                <p className="text-[1.0625rem] font-semibold text-white">
+                  Подберите видеокарту под свой монитор
+                </p>
+                <p className="text-xs text-ink-muted">
+                  1080p, 1440p или 4K — поможем найти баланс мощности и цены.
+                </p>
+              </div>
+              <a
+                href="/catalog"
+                className="inline-flex h-11 shrink-0 items-center rounded-control border border-slate-200 bg-white px-[1.125rem] text-[0.9375rem] font-semibold text-slate-900 transition-colors hover:bg-slate-50"
+              >
+                Гид по выбору
+              </a>
+            </div>
+
             <CatalogToolbar
               sort={selection.sort}
               sortOptions={loaderData.ok ? loaderData.sortOptions : FALLBACK_SORT_OPTIONS}
-              activeCount={activeFilterCount(selection)}
-              onSortChange={(sort) => handlePatch({ kind: "sort", value: sort })}
+              activeCount={activeCount}
+              total={total}
+              onSortChange={(sort: SortKey) => handlePatch({ kind: "sort", value: sort })}
               onOpenFilters={() => setDrawerOpen(true)}
             />
 
+            {activeCount > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="text-xs font-medium text-pulse-600 transition-colors hover:text-pulse-700"
+                >
+                  Сбросить все
+                </button>
+              </div>
+            ) : null}
+
             {busy ? (
-              <ProductGridSkeleton count={8} />
+              <ProductGridSkeleton count={6} />
             ) : !loaderData.ok ? (
               <CatalogError message={loaderData.error.message} status={loaderData.error.status} />
             ) : !products || products.items.length === 0 ? (
@@ -219,6 +265,16 @@ export default function Category({ loaderData }: Route.ComponentProps) {
             ) : (
               <>
                 <ProductGrid products={products.items} />
+
+                {products.pages > products.page ? (
+                  <a
+                    href={pageHref(`/catalog/${slug}`, searchParams, products.page + 1)}
+                    className="mt-2 inline-flex h-11 items-center justify-center gap-2 rounded-control border border-slate-200 bg-white px-5 text-[0.9375rem] font-semibold text-slate-900 transition-colors hover:border-pulse-400 hover:text-pulse-600"
+                  >
+                    Показать ещё {products.limit} товаров
+                  </a>
+                ) : null}
+
                 <CatalogPagination
                   page={products.page}
                   pages={products.pages}
@@ -249,7 +305,7 @@ export default function Category({ loaderData }: Route.ComponentProps) {
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
-                className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                className="rounded-control px-2.5 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
               >
                 Закрыть
               </button>
@@ -258,6 +314,8 @@ export default function Category({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
       ) : null}
+
+      <SiteFooter />
     </div>
   );
 }

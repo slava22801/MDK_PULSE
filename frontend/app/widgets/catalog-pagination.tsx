@@ -37,7 +37,7 @@ function pageItems(page: number, pages: number): PageItem[] {
 }
 
 const LINK_CLASS =
-  "inline-flex min-w-9 items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors";
+  "inline-flex min-w-9 items-center justify-center rounded-pill border px-3 py-2 text-[0.8125rem] font-medium transition-colors";
 
 export function CatalogPagination({ page, pages, makeHref }: CatalogPaginationProps) {
   if (pages <= 1) return null;
@@ -47,11 +47,11 @@ export function CatalogPagination({ page, pages, makeHref }: CatalogPaginationPr
   const next = page < pages;
 
   return (
-    <nav aria-label="Постраничная навигация" className="mt-8">
+    <nav aria-label="Постраничная навигация" className="mt-2">
       <ul className="flex flex-wrap items-center justify-center gap-1.5">
         <li>
           {previous ? (
-            <a href={makeHref(page - 1)} className={`${LINK_CLASS} border-slate-300 bg-white text-slate-700 hover:bg-slate-50`} rel="prev">
+            <a href={makeHref(page - 1)} className={`${LINK_CLASS} border-slate-200 bg-white text-slate-900 hover:border-pulse-400 hover:text-pulse-600`} rel="prev">
               Назад
             </a>
           ) : (
@@ -75,7 +75,7 @@ export function CatalogPagination({ page, pages, makeHref }: CatalogPaginationPr
               ) : (
                 <a
                   href={makeHref(item)}
-                  className={`${LINK_CLASS} border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}
+                  className={`${LINK_CLASS} border-slate-200 bg-white text-slate-900 hover:border-pulse-400 hover:text-pulse-600`}
                 >
                   {item}
                 </a>
@@ -86,7 +86,7 @@ export function CatalogPagination({ page, pages, makeHref }: CatalogPaginationPr
 
         <li>
           {next ? (
-            <a href={makeHref(page + 1)} className={`${LINK_CLASS} border-slate-300 bg-white text-slate-700 hover:bg-slate-50`} rel="next">
+            <a href={makeHref(page + 1)} className={`${LINK_CLASS} border-slate-200 bg-white text-slate-900 hover:border-pulse-400 hover:text-pulse-600`} rel="next">
               Вперёд
             </a>
           ) : (

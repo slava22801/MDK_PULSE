@@ -8,6 +8,7 @@ import { formatPrice, plural } from "~/lib/format";
 import { AvailabilityBadge, ProductImageFrame } from "~/widgets/product-card";
 import { AddToCartButton, FavoriteButton } from "~/widgets/product-actions";
 import { SiteHeader } from "~/widgets/site-header";
+import { SiteFooter } from "~/widgets/site-footer";
 
 export function meta({ data }: Route.MetaArgs): Route.MetaDescriptors {
   const name = data && "payload" in data && data.payload ? data.payload.category.name : "Сравнение";
@@ -239,6 +240,7 @@ export default function Compare({ loaderData }: Route.ComponentProps) {
             </a>
           </div>
         </main>
+        <SiteFooter />
       </div>
     );
   }
@@ -346,6 +348,7 @@ export default function Compare({ loaderData }: Route.ComponentProps) {
           </>
         ) : null}
       </main>
+      <SiteFooter />
     </div>
   );
 }

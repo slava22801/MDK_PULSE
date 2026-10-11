@@ -20,6 +20,7 @@ import { CatalogEmpty, CatalogError, CatalogToolbar, EMPTY_FACETS } from "~/widg
 import { FilterPanel } from "~/widgets/filter-panel";
 import { ProductGrid, ProductGridSkeleton } from "~/widgets/product-card";
 import { SiteHeader } from "~/widgets/site-header";
+import { SiteFooter } from "~/widgets/site-footer";
 
 export function meta({ data }: Route.MetaArgs): Route.MetaDescriptors {
   const query = data?.ok === true ? data.selection.q : "";
@@ -155,6 +156,7 @@ export default function Catalog({ loaderData }: Route.ComponentProps) {
               sort={selection.sort}
               sortOptions={loaderData.ok ? loaderData.sortOptions : FALLBACK_SORT_OPTIONS}
               activeCount={activeCount}
+              total={total}
               onSortChange={(sort) => handlePatch({ kind: "sort", value: sort })}
               onOpenFilters={() => setDrawerOpen(true)}
             />
@@ -178,6 +180,7 @@ export default function Catalog({ loaderData }: Route.ComponentProps) {
           </section>
         </div>
       </main>
+      <SiteFooter />
 
       {drawerOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">

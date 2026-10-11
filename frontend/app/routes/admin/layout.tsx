@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Form, Outlet, useLocation, useNavigation } from "react-router";
+import { data, Form, Outlet, useLocation, useNavigation } from "react-router";
 
 import type { Route } from "./+types/layout";
 
@@ -33,12 +33,20 @@ export async function loader({ request }: Route.LoaderArgs) {
   // Разделы, доступные этой роли. Для менеджера это заказы и статистика.
   const sections = ADMIN_NAV.filter((item) => item.roles.includes(session.user.role));
 
-  return {
+  const payload = {
     user: session.user,
     sections,
     /** Первая страница раздела: нужна для ссылки «Начать с…» у клиента. */
     home: sections[0]?.href ?? "/admin/orders",
   };
+
+  // Обновлённые cookie после продления сессии едут в ответе этого роута —
+  // он обрамляет все разделы админки, поэтому refresh всегда будет отдан
+  // браузеру, даже когда токен обновился на дочернем разделе.
+  if (session.setCookie) {
+    return data(payload, { headers: session.setCookie });
+  }
+  return payload;
 }
 
 export default function AdminLayout({ loaderData }: Route.ComponentProps) {

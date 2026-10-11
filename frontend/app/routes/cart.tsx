@@ -12,6 +12,7 @@ import { useAuthStore } from "~/stores/auth";
 import { useCartStore } from "~/stores/cart";
 import { AvailabilityBadge, ProductImageFrame } from "~/widgets/product-card";
 import { SiteHeader } from "~/widgets/site-header";
+import { SiteFooter } from "~/widgets/site-footer";
 
 export function meta(): Route.MetaDescriptors {
   return [
@@ -386,6 +387,7 @@ export default function CartPage({ loaderData }: Route.ComponentProps) {
             </a>
           </div>
         </main>
+        <SiteFooter />
       </div>
     );
   }
@@ -415,6 +417,7 @@ export default function CartPage({ loaderData }: Route.ComponentProps) {
             </a>
           </div>
         </main>
+        <SiteFooter />
       </div>
     );
   }
@@ -533,6 +536,7 @@ export default function CartPage({ loaderData }: Route.ComponentProps) {
           </div>
         </>
       </main>
+      <SiteFooter />
     </div>
   );
 }
