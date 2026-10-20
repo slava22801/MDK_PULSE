@@ -185,6 +185,51 @@ class StockAdjust(BaseModel):
     reason: str | None = Field(default=None, max_length=200)
 
 
+class StockSet(BaseModel):
+    """Установка остатка: сколько товара осталось доступным для продажи.
+
+    В отличие от `StockAdjust` (приход/списание) это абсолютное значение —
+    сотрудник вводит количество, которое он пересчитал на складе.
+    """
+
+    available_quantity: int = Field(
+        ge=0,
+        description="Сколько единиц товара осталось доступно для продажи",
+    )
+    reason: str | None = Field(default=None, max_length=200)
+
+
+class AdminStockItem(BaseModel):
+    """Позиция раздела «Остатки» (раздел 6.1).
+
+    Намеренно без `purchase_price`: раздел остатков открыт менеджеру,
+    а закупочная цена — коммерческая тайна, доступная администратору.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    sku: str
+    category_name: str
+    brand_name: str | None
+    # На складе: всё, что физически есть, включая зарезервированное.
+    stock_quantity: int
+    # Зарезервировано: ушло в корзины и неоплаченные заказы.
+    reserved_quantity: int
+    # Осталось: сколько можно продать прямо сейчас.
+    available_quantity: int
+    # Минимальный остаток: ниже этого сотруднику стоит закупить.
+    min_stock: int
+    status: ProductStatus
+    # Статус, который видит покупатель: выводится из остатка, а не берётся
+    # из колонки. В базе статус может устареть, и сотрудник должен видеть
+    # то же, что видит витрина.
+    availability: ProductStatus
+    is_active: bool
+    updated_at: datetime
+
+
 # ── Заказы ──
 
 

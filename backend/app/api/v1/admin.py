@@ -30,6 +30,7 @@ from app.schemas.admin import (
     AdminOrderDetail,
     AdminOrderUpdate,
     AdminProductDetail,
+    AdminStockItem,
     AdminUserListItem,
     BrandCreate,
     CategoryCreate,
@@ -45,6 +46,7 @@ from app.schemas.admin import (
     ReviewUpdate,
     StatisticsResponse,
     StockAdjust,
+    StockSet,
 )
 from app.services.admin import (
     AdminOrdersService,
@@ -53,6 +55,7 @@ from app.services.admin import (
     StatisticsService,
 )
 from app.services.admin_products import AdminProductsService, slugify
+from app.services.admin_stock import AdminStockService
 from app.services.audit import AuditService
 from app.services.catalog import CatalogService
 from app.services.import_products import ProductImporter
@@ -72,9 +75,17 @@ admin_router = APIRouter(
     tags=["Администрирование"],
     dependencies=[Depends(require_admin)],
 )
+# Остатки — отдельный роутер: правка количества нужна менеджеру (раздел 6.1),
+# а каталог с ценами и характеристиками остаётся администраторским. Смешивать
+# их в одном роутере нельзя — у них разный набор ролей.
+stock_router = APIRouter(
+    prefix="/admin",
+    tags=["Администрирование — остатки"],
+    dependencies=[Depends(require_staff)],
+)
 
-# Оба роутера подключаются в api/v1/router.py: у них разные требования к роли.
-__all__ = ["admin_router", "staff_router"]
+# Все роутеры подключаются в api/v1/router.py: у них разные требования к роли.
+__all__ = ["admin_router", "staff_router", "stock_router"]
 
 # 5 МБ — заведомо больше типового прайс-листа поставщика и меньше,
 # чем достаточно, чтобы забить память при загрузке.
@@ -276,6 +287,65 @@ async def delete_product(
     ip: RequestIP,
 ) -> None:
     await AdminProductsService(session).delete_product(product_id, actor=actor, ip_address=ip)
+
+
+# ── Остатки (доступны менеджеру) ──
+
+
+@stock_router.get(
+    "/stock",
+    response_model=AdminListResponse,
+    summary="Остатки товаров",
+)
+async def list_stock(
+    session: DbSession,
+    page: Annotated[int, Query(ge=1)] = 1,
+    limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    search: Annotated[str | None, Query(max_length=100)] = None,
+    category_id: uuid.UUID | None = None,
+    only_low: Annotated[bool, Query()] = False,
+) -> AdminListResponse:
+    """Список остатков.
+
+    Доступен сотруднику, а не только администратору: пересчёт остатков —
+    ежедневная операция менеджера (раздел 6.1).
+    """
+    items, total = await AdminStockService(session).list_stock(
+        page=page,
+        limit=limit,
+        search=search,
+        category_id=category_id,
+        only_low=only_low,
+    )
+    return AdminListResponse(
+        items=items, total=total, page=page, limit=limit, pages=_pages(total, limit, page)
+    )
+
+
+@stock_router.patch(
+    "/stock/{product_id}",
+    response_model=AdminStockItem,
+    summary="Задать остаток товара",
+)
+async def set_stock(
+    product_id: uuid.UUID,
+    payload: StockSet,
+    session: DbSession,
+    actor: CurrentUser,
+    ip: RequestIP,
+) -> AdminStockItem:
+    """Задаёт количество товара, доступное для продажи.
+
+    Сотрудник вводит абсолютное число, а сервис сам пересчитывает его в
+    изменение остатка с учётом резервов — так занять резервы нельзя.
+    """
+    return await AdminStockService(session).set_available(
+        product_id,
+        payload.available_quantity,
+        actor=actor,
+        reason=payload.reason,
+        ip_address=ip,
+    )
 
 
 @admin_router.post("/products/import", response_model=ImportReport, summary="Импорт товаров")

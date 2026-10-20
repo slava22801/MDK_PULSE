@@ -150,6 +150,32 @@ export type AdminProductResponse = {
   specs: Record<string, string>;
 };
 
+/**
+ * Позиция раздела «Остатки».
+ *
+ * Числа различаются намеренно: `stock_quantity` — что лежит на складе,
+ * `reserved_quantity` — что ушло в корзины, `available_quantity` — сколько
+ * можно продать. Сотрудник правит последнее.
+ *
+ * `availability` — статус, который видит покупатель: он выводится из
+ * остатка, потому что в базе он может устареть.
+ */
+export type AdminStockItem = {
+  id: string;
+  name: string;
+  sku: string;
+  category_name: string;
+  brand_name: string | null;
+  stock_quantity: number;
+  reserved_quantity: number;
+  available_quantity: number;
+  min_stock: number;
+  status: string;
+  availability: string;
+  is_active: boolean;
+  updated_at: string;
+};
+
 export type AdminUserListItem = {
   id: string;
   email: string;
@@ -342,6 +368,7 @@ export const ROLE_LABEL: Record<string, string> = {
 /** Идентификатор раздела админки: он же имя маршрута и ключ навигации. */
 export type AdminSection =
   | "orders"
+  | "stock"
   | "products"
   | "users"
   | "promocodes"
@@ -373,6 +400,9 @@ export type AdminNavItem = {
  */
 export const ADMIN_NAV: readonly AdminNavItem[] = [
   { section: "orders", href: "/admin/orders", label: "Заказы", roles: ["manager", "admin"] },
+  // Остатки — ежедневная работа менеджера: пересчитать, сколько товара
+  // осталось, и сразу остановить продажу, если товара больше нет.
+  { section: "stock", href: "/admin/stock", label: "Остатки", roles: ["manager", "admin"] },
   { section: "products", href: "/admin/products", label: "Товары", roles: ["admin"] },
   { section: "categories", href: "/admin/categories", label: "Категории и бренды", roles: ["admin"] },
   { section: "users", href: "/admin/users", label: "Пользователи", roles: ["admin"] },

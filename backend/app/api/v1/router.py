@@ -19,6 +19,7 @@ api_router.include_router(preferences.router)
 api_router.include_router(account.router)
 api_router.include_router(orders.router)
 api_router.include_router(admin.staff_router)
+api_router.include_router(admin.stock_router)
 api_router.include_router(admin.admin_router)
 
 

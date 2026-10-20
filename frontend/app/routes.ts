@@ -27,6 +27,8 @@ export default [
   // лёгкими для первой загрузки).
   route("admin", "routes/admin/layout.tsx", [
     route("orders", "routes/admin/orders.tsx"),
+    // Остатки открыты менеджеру: пересчёт количества — его ежедневная работа.
+    route("stock", "routes/admin/stock.tsx"),
     route("products", "routes/admin/products.tsx"),
     route("import", "routes/admin/import.tsx"),
     route("categories", "routes/admin/categories.tsx"),
